@@ -1,0 +1,11 @@
+node_modules/
+dist/
+android/
+.env.local
+.env*.local
+data/*.json
+data/*.json.backup_*
+data/.audit_secret
+data/vault/
+!data/.gitkeep
+*.log

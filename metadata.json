@@ -1,0 +1,11 @@
+{
+  "name": "OnlyUs",
+  "description": "Zero-knowledge private communication app featuring 24h disappearing messages, E2E encryption, WebRTC voice/video calls, and an encrypted media vault. No profiles, no tracking, zero notifications.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

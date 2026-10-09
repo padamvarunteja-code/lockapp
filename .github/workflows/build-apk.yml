@@ -1,0 +1,86 @@
+# Builds the OnlyUs Android APK in the cloud (no local Android SDK needed).
+#
+# How to get an APK onto the website:
+#   1. Deploy the website somewhere public over HTTPS (Render, Railway,
+#      Fly.io, a VPS, ...). Note its origin, e.g. https://onlyus.example.com
+#   2. Set it as the repo variable ONLYUS_WEB_URL
+#      (Repo Settings > Secrets and variables > Actions > Variables).
+#   3. Push a tag like `v1.0.0` (or run this workflow manually).
+#   4. The workflow builds app-debug.apk and attaches it to a GitHub Release.
+#   5. Download it from the Release, rename to `onlyus.apk`, and place it at
+#      public/downloads/onlyus.apk — the site then serves it at
+#      /downloads/onlyus.apk with a working button in the "Get OnlyUs" screen.
+#
+# NOTE: this builds a *debug* APK (signed with the standard debug key).
+# It installs fine for direct download, but Google Play requires a release
+# build signed with your own keystore — extend the gradle step when needed.
+name: Build Android APK
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install dependencies
+        run: npm install --legacy-peer-deps --no-audit --no-fund
+
+      - name: Build web app
+        run: npm run build
+
+      - name: Add Android platform
+        run: npx cap add android
+
+      - name: Patch manifest (camera/mic permissions)
+        run: node scripts/cap-patch-manifest.mjs
+
+      - name: Sync web assets into the wrapper
+        # The wrapper loads the LIVE site, so ONLYUS_WEB_URL is required.
+        run: npx cap sync android
+        env:
+          ONLYUS_WEB_URL: ${{ vars.ONLYUS_WEB_URL }}
+
+      - name: Fail if site URL is missing
+        run: |
+          if [ -z "${{ vars.ONLYUS_WEB_URL }}" ]; then
+            echo "::error::Repo variable ONLYUS_WEB_URL is not set. The APK wrapper needs your public site origin (https://...)."
+            exit 1
+          fi
+
+      - name: Build debug APK
+        working-directory: android
+        run: ./gradlew assembleDebug --no-daemon
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: onlyus-apk
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+
+      - name: Attach APK to GitHub Release (tags only)
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v2
+        with:
+          files: android/app/build/outputs/apk/debug/app-debug.apk
