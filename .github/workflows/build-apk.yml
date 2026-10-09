@@ -59,6 +59,9 @@ jobs:
       - name: Add Android platform
         run: npx cap add android
 
+      - name: Brand icons (heart logo)
+        run: node scripts/cap-icons.mjs
+
       - name: Patch manifest (camera/mic permissions)
         run: node scripts/cap-patch-manifest.mjs
 
