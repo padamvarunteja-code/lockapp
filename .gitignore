@@ -1,6 +1,9 @@
 node_modules/
 dist/
 android/
+*.zip
+*.apk
+!public/downloads/onlyus.apk
 .env.local
 .env*.local
 data/*.json
