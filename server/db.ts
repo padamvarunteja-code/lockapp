@@ -88,7 +88,11 @@ export interface DbConfig {
 }
 
 export function resolveDbConfig(env: AppEnvironment = getAppEnvironment()): DbConfig {
-  const dataDir = path.resolve(process.cwd(), 'data');
+  // DATA_DIR points at a persistent disk mount in production (e.g. /data on
+  // Render). Without it, everything lives in ./data and is wiped on restart.
+  const dataDir = process.env.DATA_DIR
+    ? path.resolve(process.env.DATA_DIR)
+    : path.resolve(process.cwd(), 'data');
   const envSuffix = env === 'production' ? 'prod' : env === 'test' ? 'test' : 'dev';
   
   const customDbFile = process.env.DATABASE_FILE || process.env.DB_FILE;

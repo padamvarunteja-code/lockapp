@@ -32,6 +32,23 @@ TLS is terminated by the reverse proxy. Open the public URL on any device and
 use OnlyUs directly in the browser; on Android Chrome you can also
 "Install app" for a home-screen icon (PWA support is built in).
 
+### Persistence (important)
+
+Accounts, sessions, messages, vault files, and admin data live under
+`DATA_DIR` (`./data` by default). Most cheap hosts wipe that folder on every
+restart — losing all accounts and password changes. For production, mount a
+persistent disk and point the app at it:
+
+```bash
+DATA_DIR=/data
+```
+
+On Render this repo ships a `render.yaml` Blueprint declaring the web service
+**plus a 1 GB persistent disk** mounted at `/data` — deploy via
+Dashboard > New > Blueprint and restarts stop wiping your data. (Persistent
+disks need a paid instance type; there is no persistence on Render free tier.
+If you stay on free, expect all data to reset whenever the service restarts.)
+
 ## Android APK (downloadable from the website)
 
 The APK is a thin native wrapper around your hosted site, built with

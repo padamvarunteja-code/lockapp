@@ -44,7 +44,9 @@ export interface AuditLogEntry {
 
 import { getAppEnvironment } from './db';
 
-const DATA_DIR = path.resolve(process.cwd(), 'data');
+const DATA_DIR = process.env.DATA_DIR
+  ? path.resolve(process.env.DATA_DIR)
+  : path.resolve(process.cwd(), 'data');
 const env = getAppEnvironment();
 const envSuffix = env === 'production' ? 'prod' : env === 'test' ? 'test' : 'dev';
 const ADMIN_DB_FILE = process.env.ADMIN_DATABASE_FILE

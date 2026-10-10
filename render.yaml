@@ -1,0 +1,38 @@
+# OnlyUs on Render — infrastructure as code.
+#
+# Option 1 (recommended): one-click deploy
+#   Render Dashboard > New > Blueprint > connect this repo.
+#   Render will prompt you for ADMIN_BOOTSTRAP_PASSWORD and
+#   AUDIT_CHAIN_SECRET, then create the service WITH its persistent disk.
+#
+# Option 2: existing dashboard service
+#   Keep your current service, but add BOTH of these manually:
+#     1. Environment > add DATA_DIR = /data
+#     2. Disks > Add Disk, mountPath /data, 1 GB
+#   ...then redeploy. Without the disk + DATA_DIR, all accounts and
+#   password changes are wiped on every restart (ephemeral filesystem).
+#
+# NOTE: persistent disks require a paid instance type (Starter or above).
+# There is no persistence on Render's free tier.
+
+services:
+  - type: web
+    name: onlyus
+    runtime: node
+    buildCommand: npm install --legacy-peer-deps && npm run build
+    startCommand: npm start
+    disk:
+      name: onlyus-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      - key: ADMIN_BOOTSTRAP_USER
+        value: onlyus_admin
+      - key: ADMIN_BOOTSTRAP_PASSWORD
+        sync: false # you will be prompted; this becomes the admin password
+      - key: AUDIT_CHAIN_SECRET
+        sync: false # you will be prompted; min 16 random characters
