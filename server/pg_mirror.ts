@@ -21,6 +21,7 @@
 
 import fs from 'node:fs';
 import path from 'node:path';
+import { Pool } from 'pg';
 import type { DatabaseSchema } from './db';
 import type { AdminStorageSchema } from './admin_db';
 
@@ -89,16 +90,15 @@ class PgMirror {
   }
 
   private createPool(): QueryablePool {
-    // eslint-disable-next-line @typescript-eslint/no-require-imports
-    const { Pool } = require('pg') as typeof import('pg');
     const ssl =
       process.env.PGSSLMODE === 'disable' ? undefined : { rejectUnauthorized: false };
-    return new Pool({
+    const pool = new Pool({
       connectionString: process.env.DATABASE_URL,
       ssl,
       max: 3,
       connectionTimeoutMillis: 10000,
-    }) as unknown as QueryablePool;
+    });
+    return pool as unknown as QueryablePool;
   }
 
   public async attach(
