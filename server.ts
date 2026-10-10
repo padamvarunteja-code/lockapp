@@ -10,6 +10,9 @@ import { chatRouter } from './server/chat';
 import { vaultRouter } from './server/vault';
 import { adminRouter } from './server/admin';
 import { setupWebSocket } from './server/ws';
+import { db } from './server/db';
+import { adminDb } from './server/admin_db';
+import { pgMirror } from './server/pg_mirror';
 
 dotenv.config();
 
@@ -100,6 +103,10 @@ async function startServer() {
   // Attach WebSocket Server for real-time messaging and WebRTC signaling
   setupWebSocket(server);
 
+  // Load persisted state from Postgres when DATABASE_URL is configured.
+  // Awaited before listening so no request is served from empty state.
+  await pgMirror.attach(db, adminDb);
+
   const isProduction = process.env.NODE_ENV === 'production';
 
   if (!isProduction) {
@@ -138,6 +145,15 @@ async function startServer() {
   server.listen(PORT, '0.0.0.0', () => {
     console.log(`[OnlyUs] Private Communication Server listening on http://0.0.0.0:${PORT}`);
   });
+
+  // Flush any pending Postgres snapshot before the host kills the process.
+  const shutdown = () => {
+    void pgMirror.flush().finally(() => process.exit(0));
+    // Hard cap so shutdown never hangs the deploy.
+    setTimeout(() => process.exit(0), 5000).unref();
+  };
+  process.on('SIGTERM', shutdown);
+  process.on('SIGINT', shutdown);
 }
 
 startServer().catch((err) => {

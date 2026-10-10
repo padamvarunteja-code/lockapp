@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import fs from 'node:fs';
 import path from 'node:path';
+import { pgMirror } from './pg_mirror';
 
 export interface AdminUser {
   id: string;
@@ -116,14 +117,14 @@ function resolveAuditSecret(): string {
 
 const AUDIT_SECRET = resolveAuditSecret();
 
-interface AdminStorageSchema {
+export interface AdminStorageSchema {
   admin_users: AdminUser[];
   admin_sessions: AdminSession[];
   audit_logs: AuditLogEntry[];
   failed_attempts: Array<{ ip: string; timestamp: number }>;
 }
 
-class AdminDatabase {
+export class AdminDatabase {
   private data: AdminStorageSchema = {
     admin_users: [],
     admin_sessions: [],
@@ -205,6 +206,19 @@ class AdminDatabase {
     } catch (err) {
       console.error('[AdminDB] Error saving admin DB:', err);
     }
+    // Mirror to Postgres when configured (survives host restarts).
+    pgMirror.scheduleSave();
+  }
+
+  /** Direct access for the Postgres persistence mirror. */
+  public getDataRef(): AdminStorageSchema {
+    return this.data;
+  }
+
+  /** Replace in-memory state (used at boot when loading the PG snapshot). */
+  public replaceData(data: AdminStorageSchema): void {
+    this.data = data;
+    this.save();
   }
 
   // Securely bootstrap an initial secops administrator if none exists

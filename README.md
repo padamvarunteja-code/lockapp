@@ -36,18 +36,19 @@ use OnlyUs directly in the browser; on Android Chrome you can also
 
 Accounts, sessions, messages, vault files, and admin data live under
 `DATA_DIR` (`./data` by default). Most cheap hosts wipe that folder on every
-restart — losing all accounts and password changes. For production, mount a
-persistent disk and point the app at it:
+restart — losing all accounts and password changes. For production you have
+two options, both free:
 
-```bash
-DATA_DIR=/data
-```
+**Free (recommended): Supabase Postgres.** Create a free project at
+supabase.com, copy its connection string, and set it as `DATABASE_URL`.
+The app mirrors every mutation into Postgres and reloads it at boot, so
+everything survives restarts with no disk needed. Vault files are stored as
+blobs and restored automatically.
 
-On Render this repo ships a `render.yaml` Blueprint declaring the web service
-**plus a 1 GB persistent disk** mounted at `/data` — deploy via
-Dashboard > New > Blueprint and restarts stop wiping your data. (Persistent
-disks need a paid instance type; there is no persistence on Render free tier.
-If you stay on free, expect all data to reset whenever the service restarts.)
+**Paid alternative: persistent disk.** Mount a disk (e.g. `/data` on Render)
+and set `DATA_DIR=/data`. This repo's `render.yaml` Blueprint shows the
+shape, but Render disks need a paid instance type — Postgres above is the
+free path.
 
 ## Android APK (downloadable from the website)
 

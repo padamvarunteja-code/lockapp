@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import crypto from 'node:crypto';
+import { pgMirror } from './pg_mirror';
 
 export interface User {
   id: string;
@@ -263,9 +264,22 @@ export class Database {
       const tempPath = `${this.config.dbFilePath}.tmp`;
       fs.writeFileSync(tempPath, JSON.stringify(this.data, null, 2), 'utf-8');
       this.atomicRename(tempPath, this.config.dbFilePath);
+      // Mirror to Postgres when configured (survives host restarts).
+      pgMirror.scheduleSave();
     } catch (err) {
       console.error('[DB] Error persisting DB file:', err);
     }
+  }
+
+  /** Direct access for the Postgres persistence mirror. */
+  public getDataRef(): DatabaseSchema {
+    return this.data;
+  }
+
+  /** Replace in-memory state (used at boot when loading the PG snapshot). */
+  public replaceData(data: DatabaseSchema): void {
+    this.data = data;
+    this.save();
   }
 
   /** Atomic rename with retries for Windows file locks (OneDrive/AV scanners). */
@@ -564,6 +578,7 @@ export class Database {
     // 6. Delete all vault media and disk files
     const userVault = this.data.vault_media.filter((vm) => vm.user_id === userId);
     for (const item of userVault) {
+      pgMirror.noteVaultDelete(item.id);
       const fullPath = path.resolve(this.config.vaultDir, item.storage_path);
       if (fs.existsSync(fullPath)) {
         try {
@@ -975,6 +990,7 @@ export class Database {
     const fullPath = path.resolve(this.config.vaultDir, relativePath);
 
     fs.writeFileSync(fullPath, encryptedBuffer);
+    pgMirror.noteVaultWrite(fileId, encryptedBuffer);
 
     const vaultItem: VaultMedia = {
       id: fileId,
@@ -1013,6 +1029,8 @@ export class Database {
     if (idx === -1) return false;
 
     const [item] = this.data.vault_media.splice(idx, 1);
+    pgMirror.noteVaultDelete(item.id);
+
     const fullPath = path.resolve(this.config.vaultDir, item.storage_path);
     if (fs.existsSync(fullPath)) {
       try {
